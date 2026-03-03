@@ -108,3 +108,10 @@ export function startCron() {
     console.log(`Hola, son las ${time} y hoy es ${fullDate}`);
   });
 }
+cron.schedule("*/10 * * * * *", async () => {
+  await fetch("http://127.0.0.1:3000/api/cron-insert", {
+    method: "POST",
+  });
+
+  console.log("Transacción insertada por cron");
+});
