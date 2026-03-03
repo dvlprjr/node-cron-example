@@ -11,7 +11,7 @@ USE FondoCron;
 GO
 
 /* ============================================================
-   2) SEQUENCES (para IDs autom√°ticos sin IDENTITY)
+   2) SEQUENCES (para IDs autom·ticos sin IDENTITY)
 ============================================================ */
 
 CREATE SEQUENCE dbo.SeqPersonaId AS INT START WITH 1 INCREMENT BY 1;
@@ -24,8 +24,8 @@ GO
    3) TABLA PERSONA
 ============================================================ */
 CREATE TABLE dbo.Persona (
-    PersonaId INT NOT NULL PRIMARY KEY
-        DEFAULT (NEXT VALUE FOR dbo.SeqPersonaId),
+    PersonaId INT NOT NULL PRIMARY KEY,
+       -- DEFAULT (NEXT VALUE FOR dbo.SeqPersonaId),
 
     Nombre NVARCHAR(120) NOT NULL,
     Email NVARCHAR(200) NULL,
@@ -52,8 +52,8 @@ GO
    5) TABLA TRANSACCION
 ============================================================ */
 CREATE TABLE dbo.Transaccion (
-    TransaccionId BIGINT NOT NULL PRIMARY KEY
-        DEFAULT (NEXT VALUE FOR dbo.SeqTransaccionId),
+    TransaccionId BIGINT NOT NULL PRIMARY KEY,
+       -- DEFAULT (NEXT VALUE FOR dbo.SeqTransaccionId),
 
     PersonaId INT NOT NULL,
     TransaccionNumero INT NOT NULL,
@@ -75,8 +75,8 @@ GO
 /* ============================================================
    6) INSERT DE PRUEBA
 ============================================================ */
-INSERT INTO dbo.Persona (Nombre, Email)
-VALUES ('Cesar Herrera', 'cesar@test.com');
+INSERT INTO dbo.Persona (PersonaId,Nombre, Email)
+VALUES (1,'Cesar Herrera', 'cesar@test.com');
 GO
 
 -- Inicializamos contador para la persona creada

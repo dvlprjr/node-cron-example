@@ -41,7 +41,6 @@ function getNowParts() {
   const tz = "America/Tegucigalpa";
   const now = new Date();
 
-  // Hora (09:42)
   const time = new Intl.DateTimeFormat("es-HN", {
     timeZone: tz,
     hour: "2-digit",
@@ -49,7 +48,6 @@ function getNowParts() {
     hour12: false,
   }).format(now);
 
-  // Fecha con letras
   const formatter = new Intl.DateTimeFormat("es-HN", {
     timeZone: tz,
     weekday: "long",
@@ -59,29 +57,17 @@ function getNowParts() {
   });
 
   const parts = formatter.formatToParts(now);
+  const weekday = parts.find((p) => p.type === "weekday")?.value ?? "";
+  const day = parts.find((p) => p.type === "day")?.value ?? "";
+  const month = parts.find((p) => p.type === "month")?.value ?? "";
+  const year = parts.find((p) => p.type === "year")?.value ?? "";
 
-  const weekday =
-    parts.find((p) => p.type === "weekday")?.value ?? "";
-
-  const day =
-    parts.find((p) => p.type === "day")?.value ?? "";
-
-  const month =
-    parts.find((p) => p.type === "month")?.value ?? "";
-
-  const year =
-    parts.find((p) => p.type === "year")?.value ?? "";
-
-  // Capitalizamos el día (Martes en vez de martes)
-  const weekdayCapitalized =
-    weekday.charAt(0).toUpperCase() + weekday.slice(1);
-
+  const weekdayCapitalized = weekday.charAt(0).toUpperCase() + weekday.slice(1);
   const fullDate = `${weekdayCapitalized} ${day} de ${month} del ${year}`;
 
   return { time, fullDate };
 }
 
-// Evita iniciar el cron 2 veces en dev
 declare global {
   // eslint-disable-next-line no-var
   var __cron_started__: boolean | undefined;
@@ -91,27 +77,41 @@ export function startCron() {
   if (globalThis.__cron_started__) return;
   globalThis.__cron_started__ = true;
 
-  const expr = process.env.CRON_EXPR || "*/2 * * * * *"; // cada 2 segundos
-/*
-        ┌──────── minuto (0 - 59)
-        │ ┌────── hora (0 - 23)
-        │ │ ┌──── día del mes (1 - 31)
-        │ │ │ ┌── mes (1 - 12)
-        │ │ │ │ ┌ día de la semana (0 - 7)
-        │ │ │ │ │
---      * * * * *
-*/
-  console.log("[CRON] Iniciado con:", expr);
+  const exprLog = process.env.CRON_EXPR || "*/2 * * * * *"; // demo log
+  const exprInsert = process.env.CRON_INSERT_EXPR || "*/1 * * * * *"; // cada 10s
 
-  cron.schedule(expr, () => {
+  const baseUrl = process.env.CRON_BASE_URL || "http://127.0.0.1:3001";
+
+  console.log("[CRON] Iniciado. log:", exprLog, "| insert:", exprInsert, "| baseUrl:", baseUrl);
+
+  // 1) Solo logs
+  cron.schedule(exprLog, () => {
     const { time, fullDate } = getNowParts();
     console.log(`Hola, son las ${time} y hoy es ${fullDate}`);
   });
-}
-cron.schedule("*/10 * * * * *", async () => {
-  await fetch("http://127.0.0.1:3000/api/cron-insert", {
-    method: "POST",
-  });
 
-  console.log("Transacción insertada por cron");
-});
+  // 2) Insert real
+  cron.schedule(exprInsert, async () => {
+    try {
+      const response = await fetch(`${baseUrl}/api/cron-insert`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const text = await response.text();
+
+      // console.log("[CRON] insert status:", response.status, response.statusText);
+      // console.log("[CRON] insert content-type:", response.headers.get("content-type"));
+      // console.log("[CRON] insert body:", text.slice(0, 300));
+
+      // Si quieres, intenta parsear JSON solo si parece JSON
+      if (response.headers.get("content-type")?.includes("application/json")) {
+        const data = JSON.parse(text);
+        if (!data.ok) console.error("[CRON] insert FAIL:", data);
+        else console.log("[CRON] insert OK:", data);
+      }
+    } catch (error) {
+      console.error("[CRON] Error al insertar:", error);
+    }
+  });
+}
