@@ -35,14 +35,13 @@
 //   console.log("[CRON] Iniciado con:", expression)
 // }
 
-// lib/cron.ts
 import cron from "node-cron";
 
 function getNowParts() {
   const tz = "America/Tegucigalpa";
-
   const now = new Date();
 
+  // Hora (09:42)
   const time = new Intl.DateTimeFormat("es-HN", {
     timeZone: tz,
     hour: "2-digit",
@@ -50,20 +49,39 @@ function getNowParts() {
     hour12: false,
   }).format(now);
 
-  const date = new Intl.DateTimeFormat("es-HN", {
+  // Fecha con letras
+  const formatter = new Intl.DateTimeFormat("es-HN", {
     timeZone: tz,
+    weekday: "long",
     day: "2-digit",
-    month: "2-digit",
+    month: "long",
     year: "numeric",
-  }).format(now);
+  });
 
-  // En es-HN normalmente sale dd/mm/aaaa; lo pasamos a dd-mm-aaaa
-  const dateDash = date.replaceAll("/", "-");
+  const parts = formatter.formatToParts(now);
 
-  return { time, dateDash };
+  const weekday =
+    parts.find((p) => p.type === "weekday")?.value ?? "";
+
+  const day =
+    parts.find((p) => p.type === "day")?.value ?? "";
+
+  const month =
+    parts.find((p) => p.type === "month")?.value ?? "";
+
+  const year =
+    parts.find((p) => p.type === "year")?.value ?? "";
+
+  // Capitalizamos el día (Martes en vez de martes)
+  const weekdayCapitalized =
+    weekday.charAt(0).toUpperCase() + weekday.slice(1);
+
+  const fullDate = `${weekdayCapitalized} ${day} de ${month} del ${year}`;
+
+  return { time, fullDate };
 }
 
-// Evita iniciar el cron 2 veces en dev (Fast Refresh / Turbopack)
+// Evita iniciar el cron 2 veces en dev
 declare global {
   // eslint-disable-next-line no-var
   var __cron_started__: boolean | undefined;
@@ -73,11 +91,20 @@ export function startCron() {
   if (globalThis.__cron_started__) return;
   globalThis.__cron_started__ = true;
 
-  const expr = process.env.CRON_EXPR || "*/1 * * * *"; // cada 1 minuto
+  const expr = process.env.CRON_EXPR || "*/2 * * * * *"; // cada 2 segundos
+/*
+        ┌──────── minuto (0 - 59)
+        │ ┌────── hora (0 - 23)
+        │ │ ┌──── día del mes (1 - 31)
+        │ │ │ ┌── mes (1 - 12)
+        │ │ │ │ ┌ día de la semana (0 - 7)
+        │ │ │ │ │
+--      * * * * *
+*/
   console.log("[CRON] Iniciado con:", expr);
 
   cron.schedule(expr, () => {
-    const { time, dateDash } = getNowParts();
-    console.log(`Hola, son las: ${time} y hoy es: ${dateDash}`);
+    const { time, fullDate } = getNowParts();
+    console.log(`Hola, son las ${time} y hoy es ${fullDate}`);
   });
 }
